@@ -15,6 +15,7 @@ define('MB_VERSION','0.1');
 define('MB_XDEBUG',FALSE);
 
 // TODO
+define('MB_LOGBUFFERING',FALSE);
 define('MB_LOGFILEPATTERN','Ymd');
 define('MB_LOGLINEPATTERN','%datetime [%type]: %message');
 
@@ -34,7 +35,7 @@ function MB_Quit($data = NULL) {
 // Include Log class
 require_once(MB_ROOT.DS.'core'.DS.'Log.class.php');
 MB_Log()->debug('START');
-MB_Log()->debug(' '.__FILE__);
+MB_Log()->debug(' '.__FILE__.':'.__LINE__);
 
 // Include Exception class
 require_once(MB_ROOT.DS.'core'.DS.'Exception.class.php');

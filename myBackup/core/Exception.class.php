@@ -1,6 +1,6 @@
 <?php
 if (!defined('MB_EXEC')) exit('Invalid access!'.EOL);
-MB_Log()->debug(' '.__FILE__);
+MB_Log()->debug(' '.__FILE__.':'.__LINE__);
 
 /**
  * Exception class

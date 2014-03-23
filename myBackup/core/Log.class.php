@@ -46,7 +46,14 @@ final class MB_Log {
 	 * Add log entry
 	 */
 	public function add($type,$message) {
-		$this->buffer[$type][] = $this->format($message,$type);
+		if (MB_LOGBUFFERING) {
+			$this->buffer[$type][] = $this->format($message,$type);
+		} else {
+			$handler = fopen(MB_ROOT.DS.'log'.DS.date(MB_LOGFILEPATTERN).'.log','a');
+			$line = $this->format($message,$type);
+			fwrite($handler,$line.EOL,strlen($line.EOL));
+			@fclose($handler);
+		}
 	}
 	
 	/**
@@ -118,5 +125,6 @@ final class MB_Log {
 			foreach($lines as $line) fwrite($handler,$line.EOL,strlen($line.EOL));
 			@fclose($handler);
 		}
+		$this->buffer = array();
 	}
 }

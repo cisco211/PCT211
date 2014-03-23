@@ -1,6 +1,6 @@
 <?php
 if (!defined('MB_EXEC')) exit('Invalid access!'.EOL);
-MB_Log()->debug(' '.__FILE__);
+MB_Log()->debug(' '.__FILE__.':'.__LINE__);
 
 #register_shutdown_function(function() {});
 #register_shutdown_function(array('MB_Controller','shutdown'));
@@ -26,6 +26,7 @@ final class MB_Controller {
 	 * Index action
 	 */
 	public function actionIndex() {
+		MB_Log()->debug('  '.__METHOD__.'()');
 		print '__INDEX__'.EOL;
 	}
 	
@@ -33,6 +34,7 @@ final class MB_Controller {
 	 * Help action
 	 */
 	public function actionHelp() {
+		MB_Log()->debug('  '.__METHOD__.'()');
 		print '__HELP__'.EOL;
 	}
 	
@@ -42,17 +44,21 @@ final class MB_Controller {
 	public function route() {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		
-		print 'Console arguments: ';
-		var_export(MB_Option()->getAll());
-		print EOL;
+		#print 'Console arguments: ';var_export(MB_Option()->getAll());print EOL;
 		
-		// Show help
+		// Load configuration
+		MB_Config();
+		if (MB_Option()->file !== NULL) {
+			MB_Config()->read(MB_Option()->file);
+		}
+		
+		// Do help
 		if (MB_Option()->help === FALSE) {
 			$this->action = 'Help';
 			return;
 		}
 		
-		// Show default
+		// Do default
 		$this->action = 'Index';
 	}
 	

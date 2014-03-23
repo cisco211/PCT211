@@ -1,6 +1,6 @@
 <?php
 if (!defined('MB_EXEC')) exit('Invalid access!'.EOL);
-MB_Log()->debug(' '.__FILE__);
+MB_Log()->debug(' '.__FILE__.':'.__LINE__);
 
 /**
  * Shortcut to Option class
@@ -103,7 +103,6 @@ final class MB_Option {
 		if ($this->exists($key)) return $this->__data[$key];
 		else return $default;
 	}
-	
 	
 	/**
 	 * Get all options

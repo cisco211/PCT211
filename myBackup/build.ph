@@ -15,4 +15,4 @@ $PHPMERGE_PROJECT_PATH_CONSTANTS = array( // Needed when using constants inside 
 );
 
 // Include phpMerge
-require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'phpMerge.php');
+require_once(dirname(dirname(__FILE__)).DIRECTORY_SEPARATOR.'phpMerge'.DIRECTORY_SEPARATOR.'phpMerge.php');

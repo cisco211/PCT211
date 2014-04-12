@@ -15,20 +15,6 @@ function MB_Option() {
 final class MB_Option {
 	
 	/**
-	 * Short options
-	 */
-	private $optionShort = array(
-		'f:',
-	);
-	
-	/**
-	 * Long options
-	 */
-	private $optionLong = array(
-		'file::',
-	);
-	
-	/**
 	 * Current options
 	 */
 	

@@ -59,29 +59,34 @@ final class MB_Config {
 # Backup root directory
 BACKUP_ROOT	{\$MB_ROOT}/backup
 
+# Backup pattern
+BACKUP_PATTERN	{\$yyyy}{\$mm}{\$dd}
+
 # EXEC commands
 # -------------
 # List of commands that has to be executed
 
 # Execute after processing
-EXEC_APPEND	echo myBackup has started!
+EXEC_APPEND	echo myBackup has ended!
 
 # Execute before processing
-EXEC_PREPEND	echo myBackup has ended!
+EXEC_PREPEND	echo myBackup has started!
 
 # FILE commands
 # -------------
 
 # Clone files
+#FILE_CLONE	SOURCE?
 FILE_CLONE
 
 # Clone command
-FILE_CLONE_CMD	cp -rf {\$source} {\$target}
+FILE_CLONE_CMD	cp --parents -rfLv {\$source} {\$target}
 
 # MYSQL commands
 # --------------
 
 # Dump database
+#MYSQL_DUMP	USER?	PASSWORD?	DATABASE?
 MYSQL_DUMP
 
 # Dump command
@@ -90,40 +95,27 @@ ENDCFG
 		);
 	}
 	
-	
-	/**
-	 * Extract config value
-	 * @param string $line
-	 * @param int $position
-	 */
 	private function _extract($line,$position) {
-		#MB_Log()->debug('  '.__METHOD__.'()');
-		$length = strlen($line);
-		if ($position > $length) return NULL;
-		$stop = @strrpos($line,chr(9),$position);
-		if ($stop !== FALSE) $stop -= $position;
-		else {
-			$stop = strrpos($line,'#',$position);
-			if ($stop !== FALSE) $stop -= $position;
-			else $stop = $length-$position;
+		$output = explode(chr(9),substr($line,$position));
+		foreach ($output as $k => $v) {
+			if (empty($v)) unset($output[$k]);
 		}
-		return trim(substr($line,$position,$stop));
+		return $output;
 	}
 	
 	/**
 	 * Parser debugging
 	 * @param string $command
-	 * @param string $value1
-	 * @param string $value2
-	 * @param string $value3
+	 * @param array $values
 	 */
-	private function _parseDebug($command,$value1=NULL,$value2=NULL,$value3=NULL) {
+	private function _parseDebug($command,$values=array()) {
 		#MB_Log()->debug('  '.__METHOD__.'()');
 		if (!MB_DEBUG) return;
 		$message = '   '.$command;
-		if ($value1 !== NULL) $message .= ','.var_export($value1,TRUE);
-		if ($value2 !== NULL) $message .= ','.var_export($value2,TRUE);
-		if ($value3 !== NULL) $message .= ','.var_export($value3,TRUE);
+		if (is_string($values)) $values = explode(chr(9),$values);
+		foreach ($values as $value) {
+			if (!empty($value)) $message .= ','.var_export($value,TRUE);
+		}
 		MB_Log()->debug($message);
 	}
 	
@@ -138,99 +130,107 @@ ENDCFG
 		// Iterate over lines
 		foreach ($lines as $line) {
 			$l = trim($line);
-			
+				
 			// Empty line
 			if (empty($l)) {
 				#$this->_parseDebug('EMPTY');
 			}
-			
+				
 			// Comment
 			else if (substr($l,0,1) === '#') {
 				$c = trim(substr($l,1));
 				#$this->_parseDebug('COMMENT',$c);
 			}
-			
+				
 			// Backup
 			else if (substr($l,0,6) === 'BACKUP') {
 				
-				// Root
-				if (substr($l,7,4) === 'ROOT') {
-					$v1 = $this->_extract($l,12);
-					if (!empty($v1)) $this->__config['backup']['root'] = $v1;
-					$this->_parseDebug('BACKUP_ROOT',$v1);
+				// Pattern
+				if (substr($l,7,7) === 'PATTERN') {
+					$v = $this->_extract($l,15);
+					if (count($v) == 1) $this->__config['backup']['pattern'] = $v[0];
+					$this->_parseDebug('BACKUP_PATTERN',$v);
 				}
 				
+				// Root
+				else if (substr($l,7,4) === 'ROOT') {
+					$v = $this->_extract($l,12);
+					if (count($v) == 1) $this->__config['backup']['root'] = $v[0];
+					$this->_parseDebug('BACKUP_ROOT',$v);
+				}
+		
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);
 				}
-				
+		
 			}
-			
+				
 			// Exec
 			else if (substr($l,0,4) === 'EXEC') {
-				
+		
 				// Append
 				if (substr($l,5,6) === 'APPEND') {
-					$v1 = $this->_extract($l,12);
-					if (!empty($v1)) $this->__config['exec']['append'][] = $v1;
-					$this->_parseDebug('EXEC_APPEND',$v1);
+					$v = $this->_extract($l,12);
+					if (count($v) == 1) $this->__config['exec']['append'][] = $v[0];
+					$this->_parseDebug('EXEC_APPEND',$v);
 				}
-				
+		
 				// Prepend
 				else if (substr($l,5,7) === 'PREPEND') {
-					$v1 = $this->_extract($l,13);
-					if (!empty($v1)) $this->__config['exec']['prepend'][] = $v1;
-					$this->_parseDebug('EXEC_PREPEND',$v1);
+					$v = $this->_extract($l,13);
+					if (count($v) == 1) $this->__config['exec']['prepend'][] = $v[0];
+					$this->_parseDebug('EXEC_PREPEND',$v);
 				}
-				
+		
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);
 				}
-				
+		
 			}
-			
+				
 			// File
 			else if (substr($l,0,4) === 'FILE') {
-				
+		
 				// Clone command
 				if (substr($l,5,9) === 'CLONE_CMD') {
-					$v1 = $this->_extract($l,15);
-					if (!empty($v1)) $this->__config['file']['clone']['command'] = $v1;
-					$this->_parseDebug('FILE_CLONE_CMD',$v1);
+					$v = $this->_extract($l,15);
+					if (count($v) == 1) $this->__config['file']['clone']['command'] = $v[0];
+					$this->_parseDebug('FILE_CLONE_CMD',$v);
 				}
-				
+		
 				// Clone
 				else if (substr($l,5,5) === 'CLONE') {
-					$v1 = $this->_extract($l,11);
-					if (!empty($v1)) $this->__config['file']['clone']['entries'][] = $v1;
-					$this->_parseDebug('FILE_CLONE',$v1);
+					$v = $this->_extract($l,11);
+					if (count($v) == 1) $this->__config['file']['clone']['entries'][] = $v[0];
+					$this->_parseDebug('FILE_CLONE',$v);
 				}
-				
+		
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);
 				}
 			}
-			
+				
 			// MySQL
 			else if (substr($l,0,5) === 'MYSQL') {
-				
+		
 				// Clone command
 				if (substr($l,6,8) === 'DUMP_CMD') {
-					$v1 = $this->_extract($l,15);
-					if (!empty($v1)) $this->__config['mysql']['dump']['command'] = $v1;
-					$this->_parseDebug('MYSQL_DUMP_CMD',$v1);
+					$v = $this->_extract($l,15);
+					if (count($v) == 1) $this->__config['mysql']['dump']['command'] = $v[0];
+					$this->_parseDebug('MYSQL_DUMP_CMD',$v);
 				}
-				
+		
 				// Clone
 				else if (substr($l,6,4) === 'DUMP') {
-					$v1 = $this->_extract($l,11);
-					if (!empty($v1)) $this->__config['mysql']['dump']['entries'][] = $v1;
-					$this->_parseDebug('MYSQL_DUMP',$v1);
+					$v = $this->_extract($l,11);
+					if (count($v) == 3) $this->__config['mysql']['dump']['entries'][] = array('user'=>$v[0],'password'=>$v[1],'database'=>$v[2]);
+					if (isset($v[1]) AND !empty($v[1])) $v[1] = '*****';
+					$this->_parseDebug('MYSQL_DUMP',$v);
 				}
-				
+		
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);

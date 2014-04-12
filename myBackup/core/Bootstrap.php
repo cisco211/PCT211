@@ -40,6 +40,9 @@ MB_Log()->debug(' '.__FILE__.':'.__LINE__);
 // Include Exception class
 require_once(MB_ROOT.DS.'core'.DS.'Exception.class.php');
 
+// Include Format class
+require_once(MB_ROOT.DS.'core'.DS.'Format.class.php');
+
 // Include Option class
 require_once(MB_ROOT.DS.'core'.DS.'Option.class.php');
 

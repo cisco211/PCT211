@@ -23,11 +23,87 @@ final class MB_Controller {
 	}
 	
 	/**
-	 * Index action
+	 * Index action (deprecated)
 	 */
 	public function actionIndex() {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		print '__INDEX__'.EOL;
+		
+		// Output helperle ^^
+		$m = create_function('$a','MB_Log()->info($a);print $a.EOL;');
+		
+		// Config file info
+		if (MB_Option()->file !== NULL) {
+			$m('Processing...');
+			$m('Configuration file: "'.MB_Option()->file.'"');
+		}
+		else {
+			return $this->actionHelp();
+		}
+		
+		// Build root path
+		$backupRoot = MB_Format()->generic(MB_Config()->get('backup.root'));
+		$m('Backup root path: "'.$backupRoot.'"');
+		
+		// Target name
+		$targetName = MB_Format()->generic(MB_Config()->get('backup.pattern'));
+		if (file_exists($backupRoot.DS.$targetName)) {
+			$i = 2;
+			while (file_exists($backupRoot.DS.$targetName.'_'.$i)) { $i++; }
+			$targetName .= '_'.$i;
+			$m('Target already exists, using: "'.$targetName.'"');
+		} else {
+			$m('Target name: "'.$targetName.'"');
+		}
+		
+		// Create target
+		if (!mkdir($backupRoot.DS.$targetName,0770,TRUE)) throw new MB_Exception('Failed to create target directory "'.$backupRoot.DS.$targetName.'"!');
+		
+		// Prepend execution
+		$m('Executing prepend script(s)...');
+		$prepends = MB_Config()->get('exec.prepend');
+		foreach ($prepends as $prepend) {
+			$c = MB_Format()->generic($prepend);
+			$m('Executing "'.$c.'"');
+			system($c);
+		}
+		
+		// FILE_CLONE
+		$m('Processing file clone(s)...');
+		$fileCloneCommand = MB_Config()->get('file.clone.command');
+		if (!mkdir($backupRoot.DS.$targetName.DS.'FILE_CLONE',0770,TRUE)) throw new MB_Exception('Failed to create target directory "'.$backupRoot.DS.$targetName.DS.'FILE_CLONE"!');
+		$fileClones = MB_Config()->get('file.clone.entries');
+		foreach ($fileClones as $fileClone) {
+			$c = MB_Format()->cmdFileClone($fileCloneCommand,$fileClone,$backupRoot.DS.$targetName.DS.'FILE_CLONE');
+			$m('Executing "'.$c.'"');
+			system($c);
+		}
+		
+		// MYSQL_DUMP
+		$m('Processing mysql dump(s)...');
+		$mysqlDumpCommand = MB_Config()->get('mysql.dump.command');
+		if (!mkdir($backupRoot.DS.$targetName.DS.'MYSQL_DUMP',0770,TRUE)) throw new MB_Exception('Failed to create target directory "'.$backupRoot.DS.$targetName.DS.'MYSQL_DUMP"!');
+		$mysqlDumps = MB_Config()->get('mysql.dump.entries');
+		foreach ($mysqlDumps as $mysqlDump) {
+			$c = MB_Format()->cmdMysqlDump($mysqlDumpCommand,$mysqlDump['user'],$mysqlDump['password'],$mysqlDump['database'],$backupRoot.DS.$targetName.DS.'MYSQL_DUMP'.DS.$mysqlDump['database'].'.sql');
+			$c2 = str_replace($mysqlDump['password'],'*****',$c);
+			$m('Executing "'.$c2.'"');
+			system($c);
+		}
+		
+		// Append execution
+		$m('Executing append script(s)...');
+		$prepends = MB_Config()->get('exec.append');
+		foreach ($prepends as $append) {
+			$c = MB_Format()->generic($append);
+			$m('Executing "'.$c.'"');
+			system($c);
+		}
+		
+		// ARCHIVE
+		
+		// COMPRESS
+		
+		// CLEAN
 	}
 	
 	/**

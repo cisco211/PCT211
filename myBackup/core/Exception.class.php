@@ -12,7 +12,7 @@ final class MB_Exception extends ErrorException {
 	 */
 	public static function showError($e) {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		MB_Log()->error(get_class($e).' "'.$e->getMessage().'" in '.$e->getFile().':'.$e->getLine().EOL.$e->getTraceAsString().EOL);
+		MB_Log()->debug(get_class($e).' "'.$e->getMessage().'" in '.$e->getFile().':'.$e->getLine().EOL.$e->getTraceAsString().EOL);
 		if (MB_DEBUG) MB_Quit(get_class($e).' "'.$e->getMessage().'" in '.$e->getFile().':'.$e->getLine().EOL.$e->getTraceAsString().EOL);
 		else MB_Quit('ERROR: '.$e->getMessage().EOL);
 	}

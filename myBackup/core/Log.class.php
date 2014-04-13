@@ -9,7 +9,7 @@ function MB_Log() {
 }
 
 /**
- * Log class
+ * Log class DEPRECATED!!!
  */
 final class MB_Log {
 	
@@ -27,7 +27,7 @@ final class MB_Log {
 	 * Constructor
 	 */
 	private function __construct() {
-		if (!file_exists(MB_ROOT.DS.'log') AND !@mkdir(MB_ROOT.DS.'log')) MB_Quit('ERROR: Failed to create log directory!'.EOL);
+		if (MB_DEBUG AND !file_exists(MB_ROOT.DS.'log') AND !@mkdir(MB_ROOT.DS.'log')) MB_Quit('ERROR: Failed to create log directory!'.EOL);
 	}
 	
 	/**
@@ -65,18 +65,6 @@ final class MB_Log {
 	}
 	
 	/**
-	 * Log info message
-	 */
-	public function info($message) {
-		$this->add('info',$message);
-	}
-	/**
-	 * Log error message
-	 */
-	public function error($message) {
-		$this->add('error',$message);
-	}
-	/**
 	 * Format log message
 	 */
 	public function format($message,$type) {
@@ -100,20 +88,6 @@ final class MB_Log {
 	public static function getInstance() {
 		if(self::$instance === NULL) self::$instance = new MB_Log();
 		return self::$instance;
-	}
-	
-	/**
-	 * Log security message
-	 */
-	public function security($message) {
-		$this->add('security',$message);
-	}
-	
-	/**
-	 * Log warning message
-	 */
-	public function warning($message) {
-		$this->add('warning',$message);
 	}
 	
 	/**

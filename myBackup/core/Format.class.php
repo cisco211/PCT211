@@ -70,6 +70,38 @@ final class MB_Format {
 	}
 	
 	/**
+	 * Format ARCHIVE_CMD string
+	 * @param string $string
+	 * @param string $source
+	 * @param string $target
+	 * @return string
+	 */
+	public function cmdArchive($string,$source,$target) {
+		return $this->any($string,array('source'=>$source,'target'=>$target));
+	}
+	
+	/**
+	 * Format ARCHIVE_COMPRESS_CMD string
+	 * @param string $string
+	 * @param string $source
+	 * @param string $target
+	 * @return string
+	 */
+	public function cmdArchiveCompress($string,$source,$target) {
+		return $this->any($string,array('source'=>$source,'target'=>$target));
+	}
+	
+	/**
+	 * Format CLEAN_CMD string
+	 * @param string $string
+	 * @param string $target
+	 * @return string
+	 */
+	public function cmdClean($string,$target) {
+		return $this->any($string,array('target'=>$target));
+	}
+	
+	/**
 	 * Format FILE_CLONE_CMD string
 	 * @param string $string
 	 * @param string $source
@@ -78,6 +110,22 @@ final class MB_Format {
 	 */
 	public function cmdFileClone($string,$source,$target) {
 		return $this->any($string,array('source'=>$source,'target'=>$target));
+	}
+	
+	/**
+	 * Format MONGO_DUMP_CMD string
+	 * @param string $string
+	 * @param string $host
+	 * @param string $port
+	 * @param string $user
+	 * @param string $password
+	 * @param string $database
+	 * @param string $collection
+	 * @param string $target
+	 * @return string
+	 */
+	public function cmdMongoDump($string,$host,$port,$user,$password,$database,$collection,$target) {
+		return $this->any($string,array('host'=>$host,'host'=>$port,'user'=>$user,'password'=>$password,'database'=>$database,'collection'=>$collection,'target'=>$target));
 	}
 	
 	/**

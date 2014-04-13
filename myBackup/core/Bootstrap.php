@@ -8,10 +8,10 @@ set_time_limit(0);
 define('EOL',chr(13).chr(10));
 
 // Project constants
-define('MB_DEBUG',TRUE);
+define('MB_DEBUG',FALSE);
 define('MB_NAME','MyBackup');
 define('MB_START',microtime(TRUE));
-define('MB_VERSION','0.1');
+define('MB_VERSION','0.3');
 define('MB_XDEBUG',FALSE);
 
 // TODO
@@ -42,6 +42,9 @@ require_once(MB_ROOT.DS.'core'.DS.'Exception.class.php');
 
 // Include Format class
 require_once(MB_ROOT.DS.'core'.DS.'Format.class.php');
+
+// Include System class
+require_once(MB_ROOT.DS.'core'.DS.'System.class.php');
 
 // Include Option class
 require_once(MB_ROOT.DS.'core'.DS.'Option.class.php');

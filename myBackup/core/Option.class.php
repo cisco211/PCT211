@@ -40,6 +40,8 @@ final class MB_Option {
 		
 		// Options scheme
 		$oS = array(); $oL = array();
+		$oS[] = 'c'; $oL[] = 'check'; // Check environment (No value)
+		$oS[] = 'd'; $oL[] = 'default'; // Return default config (No value)
 		$oS[] = 'f:'; $oL[] = 'file:'; // File (Required value)
 		$oS[] = 'h'; $oL[] = 'help'; // Help (No value)
 		$oS[] = 'q'; $oL[] = 'quiet'; // Quiet (No value)
@@ -48,6 +50,8 @@ final class MB_Option {
 		$o = getopt(implode('',$oS),$oL);
 		
 		// Assign options
+		$this->_set($o,'c','check');
+		$this->_set($o,'d','default');
 		$this->_set($o,'f','file');
 		$this->_set($o,'h','help');
 		$this->_set($o,'q','quiet');

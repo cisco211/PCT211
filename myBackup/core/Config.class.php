@@ -23,8 +23,21 @@ final class MB_Config {
 	 * Configuration data
 	 */
 	private $__config = array(
+		'archive'=>array(
+			'command'=>NULL,
+			'compress'=>array(
+				'command'=>NULL,
+				'enable'=>NULL,
+			),
+			'enable'=>NULL,
+		),
 		'backup'=>array(
+			'pattern'=>NULL,
 			'root'=>NULL,
+		),
+		'clean'=>array(
+			'command'=>NULL,
+			'older'=>NULL,
 		),
 		'exec'=>array(
 			'append'=>array(),
@@ -32,6 +45,12 @@ final class MB_Config {
 		),
 		'file'=>array(
 			'clone'=>array(
+				'command'=>NULL,
+				'entries'=>array(),
+			),
+		),
+		'mongo'=>array(
+			'dump'=>array(
 				'command'=>NULL,
 				'entries'=>array(),
 			),
@@ -49,28 +68,62 @@ final class MB_Config {
 	 * @return array
 	 */
 	private function _default() {
-		return explode(chr(10),<<<ENDCFG
+return explode(chr(10),<<<ENDCFG
 # myBackup configuration file
 # ===========================
+
+# ARCHIVE commands
+# ----------------
+
+# Archive command
+#ARCHIVE_CMD	cd {\$source} && find . | cpio -ovF {\$target} && rm -rf {\$source}
+ARCHIVE_CMD	tar --remove-files -cvhlpf {\$target} -C {\$source} .
+
+# Compress archive command
+#ARCHIVE_COMPRESS_CMD	bzip2 {\$source}
+ARCHIVE_COMPRESS_CMD	gzip {\$source}
+
+# Compress archive
+#ARCHIVE_COMPRESS_ENABLE	gz
+#ARCHIVE_COMPRESS_ENABLE	bz2
+ARCHIVE_COMPRESS_ENABLE	no
+
+# Tape archive (backup as one file)
+#ARCHIVE_ENABLE	cpio
+#ARCHIVE_ENABLE	tar
+ARCHIVE_ENABLE	no
 
 # BACKUP commands
 # ---------------
 
+# Backup pattern
+BACKUP_PATTERN	{\$yyyy}{\$mm}{\$dd}
+
 # Backup root directory
 BACKUP_ROOT	{\$MB_ROOT}/backup
 
-# Backup pattern
-BACKUP_PATTERN	{\$yyyy}{\$mm}{\$dd}
+# CLEAN commands
+# --------------
+
+# Clean command
+CLEAN_CMD	rm -rfv {\$target}
+
+# Clean older
+#CLEAN_OLDER 1209600
+#CLEAN_OLDER 86400
+CLEAN_OLDER	0
 
 # EXEC commands
 # -------------
 # List of commands that has to be executed
 
 # Execute after processing
-EXEC_APPEND	echo myBackup has ended!
+#EXEC_APPEND	COMMAND?
+EXEC_APPEND
 
 # Execute before processing
-EXEC_PREPEND	echo myBackup has started!
+#EXEC_PREPEND	COMMAND?
+EXEC_PREPEND
 
 # FILE commands
 # -------------
@@ -82,6 +135,27 @@ FILE_CLONE
 # Clone command
 FILE_CLONE_CMD	cp --parents -rfLv {\$source} {\$target}
 
+# MONGO commands
+# --------------
+
+# Dump cluster/database/collection
+#MONGO_DUMP DATABASE?
+#MONGO_DUMP DATABASE?	COLLECTION?
+#MONGO_DUMP USER?	PASSWORD?	DATABASE?
+#MONGO_DUMP USER?	PASSWORD?	DATABASE?	COLLECTION?
+#MONGO_DUMP HOST?	PORT?	USER?	PASSWORD?	DATABASE?
+#MONGO_DUMP HOST?	PORT?	USER?	PASSWORD?	DATABASE?	COLLECTION?
+MONGO_DUMP
+
+# Dump command
+#MONGO_DUMP_CMD	mongodump --verbose --out {\$target}
+#MONGO_DUMP_CMD	mongodump --verbose --db {\$database} --collection {\$collection} --out {\$target}
+#MONGO_DUMP_CMD	mongodump --verbose --user {\$user} --password {\$password} --db {\$database} --out {\$target}
+#MONGO_DUMP_CMD	mongodump --verbose --user {\$user} --password {\$password} --db {\$database} --collection {\$collection} --out {\$target}
+#MONGO_DUMP_CMD	mongodump --verbose --host {\$host} --port {\$port} --user {\$user} --password {\$password} --db {\$database} --out {\$target}
+#MONGO_DUMP_CMD	mongodump --verbose --host {\$host} --port {\$port} --user {\$user} --password {\$password} --db {\$database} --collection {\$collection} --out {\$target}
+MONGO_DUMP_CMD	mongodump --verbose --db {\$database} --out {\$target}
+
 # MYSQL commands
 # --------------
 
@@ -91,6 +165,8 @@ MYSQL_DUMP
 
 # Dump command
 MYSQL_DUMP_CMD	mysqldump -u {\$user} -p{\$password} {\$database} > {\$target}
+
+#~END
 ENDCFG
 		);
 	}
@@ -98,7 +174,7 @@ ENDCFG
 	private function _extract($line,$position) {
 		$output = explode(chr(9),substr($line,$position));
 		foreach ($output as $k => $v) {
-			if (empty($v)) unset($output[$k]);
+			if (empty($v) AND $v !== '0') unset($output[$k]);
 		}
 		return $output;
 	}
@@ -114,7 +190,7 @@ ENDCFG
 		$message = '   '.$command;
 		if (is_string($values)) $values = explode(chr(9),$values);
 		foreach ($values as $value) {
-			if (!empty($value)) $message .= ','.var_export($value,TRUE);
+			if (!empty($value) OR $value === '0') $message .= ','.var_export($value,TRUE);
 		}
 		MB_Log()->debug($message);
 	}
@@ -141,7 +217,77 @@ ENDCFG
 				$c = trim(substr($l,1));
 				#$this->_parseDebug('COMMENT',$c);
 			}
+			
+			// Archive
+			else if (substr($l,0,7) === 'ARCHIVE') {
 				
+				// Command
+				if (substr($l,8,3) === 'CMD') {
+					$v = $this->_extract($l,12);
+					if (count($v) == 1) $this->__config['archive']['command'] = $v[0];
+					$this->_parseDebug('ARCHIVE_CMD',$v);
+				}
+				
+				// Compress
+				else if (substr($l,8,8) === 'COMPRESS') {
+					
+					// Command
+					if (substr($l,17,3) === 'CMD') {
+						$v = $this->_extract($l,21);
+						if (count($v) == 1) $this->__config['archive']['compress']['command'] = $v[0];
+						$this->_parseDebug('ARCHIVE_COMPRESS_CMD',$v);
+					}
+					
+					// Enable
+					else if (substr($l,17,6) === 'ENABLE') {
+						$v = $this->_extract($l,24);
+						if (count($v) == 1) $this->__config['archive']['compress']['enable'] = (strtolower($v[0]) == 'no' ? FALSE : strtolower($v[0]));
+						$this->_parseDebug('ARCHIVE_COMPRESS_ENABLE',$v);
+					}
+					
+					// Any other
+					else {
+						$this->_parseDebug('UNKNOWN',$l);
+					}
+				}
+				
+				// Enable
+				else if (substr($l,8,6) === 'ENABLE') {
+					$v = $this->_extract($l,15);
+					if (count($v) == 1) $this->__config['archive']['enable'] = (strtolower($v[0]) == 'no' ? FALSE : strtolower($v[0]));
+					$this->_parseDebug('ARCHIVE_ENABLE',$v);
+				}
+				
+				// Any other
+				else {
+					$this->_parseDebug('UNKNOWN',$l);
+				}
+				
+			}
+			
+			// Clean
+			else if (substr($l,0,5) === 'CLEAN') {
+				
+				// Command
+				if (substr($l,6,3) === 'CMD') {
+					$v = $this->_extract($l,10);
+					if (count($v) == 1) $this->__config['clean']['command'] = $v[0];
+					$this->_parseDebug('CLEAN_CMD',$v);
+				}
+				
+				// Older
+				else if (substr($l,6,5) === 'OLDER') {
+					$v = $this->_extract($l,12);
+					if (count($v) == 1) $this->__config['clean']['older'] = intval($v[0]);
+					$this->_parseDebug('CLEAN_OLDER',$v);
+				}
+				
+				// Any other
+				else {
+					$this->_parseDebug('UNKNOWN',$l);
+				}
+			}
+			
 			// Backup
 			else if (substr($l,0,6) === 'BACKUP') {
 				
@@ -212,7 +358,40 @@ ENDCFG
 					$this->_parseDebug('UNKNOWN',$l);
 				}
 			}
+			
+			// Mongo
+			else if (substr($l,0,5) === 'MONGO') {
+			
+				// Clone command
+				if (substr($l,6,8) === 'DUMP_CMD') {
+					$v = $this->_extract($l,15);
+					if (count($v) == 1) $this->__config['mongo']['dump']['command'] = $v[0];
+					$this->_parseDebug('MONGO_DUMP_CMD',$v);
+				}
+			
+				// Clone
+				else if (substr($l,6,4) === 'DUMP') {
+					$v = $this->_extract($l,11);
+					if (count($v) == 1) $this->__config['mongo']['dump']['entries'][] = array('host'=>NULL,'port'=>NULL,'user'=>NULL,'password'=>NULL,'database'=>$v[0],'collection'=>NULL);
+					if (count($v) == 2) $this->__config['mongo']['dump']['entries'][] = array('host'=>NULL,'port'=>NULL,'user'=>NULL,'password'=>NULL,'database'=>$v[0],'collection'=>$v[1]);
+					if (count($v) == 3) $this->__config['mongo']['dump']['entries'][] = array('host'=>NULL,'port'=>NULL,'user'=>$v[0],'password'=>$v[1],'database'=>$v[2],'collection'=>NULL);
+					if (count($v) == 4) $this->__config['mongo']['dump']['entries'][] = array('host'=>NULL,'port'=>NULL,'user'=>$v[0],'password'=>$v[1],'database'=>$v[2],'collection'=>$v[3]);
+					if (count($v) == 5) $this->__config['mongo']['dump']['entries'][] = array('host'=>$v[0],'port'=>$v[1],'user'=>$v[2],'password'=>$v[3],'database'=>$v[4],'collection'=>NULL);
+					if (count($v) == 6) $this->__config['mongo']['dump']['entries'][] = array('host'=>$v[0],'port'=>$v[1],'user'=>$v[2],'password'=>$v[3],'database'=>$v[4],'collection'=>$v[5]);
+					if (count($v) == 3 AND isset($v[1]) AND !empty($v[1])) $v[1] = '*****';
+					if (count($v) == 4 AND isset($v[1]) AND !empty($v[1])) $v[1] = '*****';
+					if (count($v) == 5 AND isset($v[3]) AND !empty($v[3])) $v[3] = '*****';
+					if (count($v) == 6 AND isset($v[3]) AND !empty($v[3])) $v[3] = '*****';
+					$this->_parseDebug('MONGO_DUMP',$v);
+				}
+			
+				// Any other
+				else {
+					$this->_parseDebug('UNKNOWN',$l);
+				}
+			}
 				
+			
 			// MySQL
 			else if (substr($l,0,5) === 'MYSQL') {
 		
@@ -271,6 +450,14 @@ ENDCFG
 	}
 	
 	/**
+	 * Get default config file
+	 * @return string
+	 */
+	public function getDefault() {
+		return $this->_default();
+	}
+	
+	/**
 	 * Return class instance
 	 */
 	public static function getInstance() {
@@ -288,7 +475,11 @@ ENDCFG
 	public function read($file) {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		$lines = array();
-		if (!@file_exists($file)) throw new MB_Exception('Configuration file "'.$file.'" not found!');
+		if (!@file_exists($file)) {
+			$file2 = MB_ROOT.DS.$file;
+			if (@file_exists($file2)) $file = $file2;
+			else throw new MB_Exception('Configuration file "'.$file.'" not found!');
+		}
 		$lines = @file($file);
 		if ($lines === FALSE) throw new MB_Exception('Configuration file "'.$file.'" not readable!');
 		return $this->_parse($lines);

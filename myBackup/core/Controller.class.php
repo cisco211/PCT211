@@ -51,7 +51,7 @@ final class MB_Controller {
 	 */
 	public function actionDefault() {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		MB_System()->output(implode(EOL,MB_Config()->getDefault()));
+		MB_System()->output(implode(chr(10),MB_Config()->getDefault()));
 	}
 	
 	/**
@@ -186,6 +186,17 @@ final class MB_Controller {
 			}
 		}
 		
+		// FILE_TARBALL
+		$fileTarballs = MB_Config()->get('file.tarball.entries');
+		if (count($fileTarballs) > 0) {
+			MB_System()->output('Processing file tarball(s)...');
+			$fileTarballCommand = MB_Config()->get('file.tarball.command');
+			foreach ($fileTarballs as $fileTarball) {
+				$c = MB_Format()->cmdFileTarball($fileTarballCommand,$fileTarball,$backupRoot.DS.$targetName.DS.'FILE_TARBALL.tar');
+				MB_System()->execute($c);
+			}
+		}
+		
 		// MONGO_DUMP
 		$mongoDumps = MB_Config()->get('mongo.dump.entries');
 		if (count($mongoDumps) > 0) {
@@ -235,7 +246,7 @@ final class MB_Controller {
 		if ($cleanOlder > 0) {
 			$cleanCommand = MB_Config()->get('clean.command');
 			MB_System()->output('Executing cleaner...');
-			MB_System()->clean($backupRoot,$cleanCommand,1);
+			MB_System()->clean($backupRoot,$cleanCommand,$cleanOlder);
 		}
 		
 		// Append execution

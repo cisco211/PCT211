@@ -11,7 +11,7 @@ define('EOL',chr(13).chr(10));
 define('MB_DEBUG',FALSE);
 define('MB_NAME','MyBackup');
 define('MB_START',microtime(TRUE));
-define('MB_VERSION','0.3');
+define('MB_VERSION','0.4');
 define('MB_XDEBUG',FALSE);
 
 // TODO

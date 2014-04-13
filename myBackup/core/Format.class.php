@@ -113,6 +113,17 @@ final class MB_Format {
 	}
 	
 	/**
+	 * Format FILE_TARBALL_CMD string
+	 * @param string $string
+	 * @param string $source
+	 * @param string $target
+	 * @return string
+	 */
+	public function cmdFileTarball($string,$source,$target) {
+		return $this->any($string,array('source'=>$source,'target'=>$target));
+	}
+	
+	/**
 	 * Format MONGO_DUMP_CMD string
 	 * @param string $string
 	 * @param string $host

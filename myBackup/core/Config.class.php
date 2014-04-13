@@ -48,6 +48,10 @@ final class MB_Config {
 				'command'=>NULL,
 				'entries'=>array(),
 			),
+			'tarball'=>array(
+				'command'=>NULL,
+				'entries'=>array(),
+			),
 		),
 		'mongo'=>array(
 			'dump'=>array(
@@ -135,6 +139,13 @@ FILE_CLONE
 # Clone command
 FILE_CLONE_CMD	cp --parents -rfLv {\$source} {\$target}
 
+# Tarball files
+#FILE_TARBALL	SOURCE?
+FILE_TARBALL
+
+# Tarball command
+FILE_TARBALL_CMD	tar -rvhlpf {\$target} {\$source}
+
 # MONGO commands
 # --------------
 
@@ -164,7 +175,8 @@ MONGO_DUMP_CMD	mongodump --verbose --db {\$database} --out {\$target}
 MYSQL_DUMP
 
 # Dump command
-MYSQL_DUMP_CMD	mysqldump -u {\$user} -p{\$password} {\$database} > {\$target}
+#MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose --all-databases -u {\$user} -p{\$password} > {\$target}
+MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose -u {\$user} -p{\$password} {\$database} > {\$target}
 
 #~END
 ENDCFG
@@ -352,7 +364,21 @@ ENDCFG
 					if (count($v) == 1) $this->__config['file']['clone']['entries'][] = $v[0];
 					$this->_parseDebug('FILE_CLONE',$v);
 				}
-		
+				
+				// Tarball command
+				else if (substr($l,5,11) === 'TARBALL_CMD') {
+					$v = $this->_extract($l,17);
+					if (count($v) == 1) $this->__config['file']['tarball']['command'] = $v[0];
+					$this->_parseDebug('FILE_TARBALL_CMD',$v);
+				}
+				
+				// Tarball
+				else if (substr($l,5,7) === 'TARBALL') {
+					$v = $this->_extract($l,13);
+					if (count($v) == 1) $this->__config['file']['tarball']['entries'][] = $v[0];
+					$this->_parseDebug('FILE_TARBALL',$v);
+				}
+				
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);

@@ -69,7 +69,8 @@ final class MB_System {
 		if ($timeout == 0) return TRUE;
 		$items = new DirectoryIterator($path);
 		foreach ($items as $item) {
-			if (!$item->isDot() AND time() > filemtime($path.DS.$item->getFilename())+$timeout) {
+			var_dump($item->getFilename(),filemtime($path.DS.$item->getFilename()),$timeout,filemtime($path.DS.$item->getFilename())+$timeout,time());
+			if (!$item->isDot() AND (filemtime($path.DS.$item->getFilename())+$timeout) < time()) {
 				$this->execute(MB_Format()->cmdClean($command,$path.DS.$item->getFilename()));
 			}
 		}

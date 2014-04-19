@@ -33,7 +33,7 @@ ob_end_flush();
 define('EOL',chr(13).chr(10));
 
 // Project constants
-define('MB_DEBUG',TRUE);
+define('MB_DEBUG',FALSE);
 define('MB_NAME','MyBackup');
 define('MB_START',microtime(TRUE));
 define('MB_VERSION','0.5');
@@ -414,7 +414,6 @@ final class MB_System {
 				if (!$buffer AND $q !== FALSE) fwrite($this->stdout,$b);
 				else $x['output'] .= $b;
 			}
-			#usleep(10000);
 			$s = proc_get_status($h);
 		}
 		fclose($p[0]);
@@ -552,10 +551,23 @@ function MB_Option() {
 final class MB_Option {
 
 	/**
-	 * Current options
+	 * Options data
 	 */
 
 	private $__data = array();
+
+	/**
+	 * Options scheme
+	 * @var unknown
+	 */
+	private $__scheme = array(
+		'c'=>'check',	// Check environment (No value)
+		'd'=>'default',	// Return default config (No value)
+		'f:'=>'file:',	// File (Required value)
+		'h'=>'help',	// Help (No value)
+		'q'=>'quiet',	// Quiet (No value)
+		'v'=>'version',	// Version (No value)
+	);
 
 	/**
 	 * Instance variable
@@ -575,23 +587,11 @@ final class MB_Option {
 	private function __construct() {
 		MB_Log()->debug('  '.__METHOD__.'()');
 
-		// Options scheme
-		$oS = array(); $oL = array();
-		$oS[] = 'c'; $oL[] = 'check'; // Check environment (No value)
-		$oS[] = 'd'; $oL[] = 'default'; // Return default config (No value)
-		$oS[] = 'f:'; $oL[] = 'file:'; // File (Required value)
-		$oS[] = 'h'; $oL[] = 'help'; // Help (No value)
-		$oS[] = 'q'; $oL[] = 'quiet'; // Quiet (No value)
-
 		// Get options
-		$o = getopt(implode('',$oS),$oL);
+		$o = getopt(implode('',array_keys($this->__scheme)),$this->__scheme);
 
 		// Assign options
-		$this->_set($o,'c','check');
-		$this->_set($o,'d','default');
-		$this->_set($o,'f','file');
-		$this->_set($o,'h','help');
-		$this->_set($o,'q','quiet');
+		foreach ($this->__scheme as $k => $v) $this->_set($o,trim($k,':'),trim($v,':'));
 	}
 
 	/**
@@ -710,12 +710,14 @@ final class MB_Config {
 			'dump'=>array(
 				'command'=>NULL,
 				'entries'=>array(),
+				'tarball'=>NULL,
 			),
 		),
 		'mysql'=>array(
 			'dump'=>array(
 				'command'=>NULL,
 				'entries'=>array(),
+				'tarball'=>NULL,
 			),
 		),
 	);
@@ -820,6 +822,10 @@ MONGO_DUMP
 #MONGO_DUMP_CMD	mongodump --verbose --host {\$host} --port {\$port} --user {\$user} --password {\$password} --db {\$database} --collection {\$collection} --out {\$target}
 MONGO_DUMP_CMD	mongodump --verbose --db {\$database} --out {\$target}
 
+# Tarball dump
+#MONGO_DUMP_TARBALL yes
+MONGO_DUMP_TARBALL no
+
 # MYSQL commands
 # --------------
 
@@ -831,15 +837,20 @@ MYSQL_DUMP
 #MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose --all-databases -u {\$user} -p{\$password} > {\$target}
 MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose -u {\$user} -p{\$password} {\$database} > {\$target}
 
+# Tarball dump
+#MYSQL_DUMP_TARBALL yes
+MYSQL_DUMP_TARBALL no
+
 #~END
 ENDCFG
 		);
 	}
 
 	private function _extract($line,$position) {
+		#MB_Log()->debug('  '.__METHOD__.'()');
 		$output = explode(chr(9),substr($line,$position));
 		foreach ($output as $k => $v) {
-			if (empty($v) AND $v !== '0') unset($output[$k]);
+			if ($v === '') unset($output[$k]);
 		}
 		return $output;
 	}
@@ -854,9 +865,7 @@ ENDCFG
 		if (!MB_DEBUG) return;
 		$message = '   '.$command;
 		if (is_string($values)) $values = explode(chr(9),$values);
-		foreach ($values as $value) {
-			if (!empty($value) OR $value === '0') $message .= ','.var_export($value,TRUE);
-		}
+		foreach ($values as $v) $message .= ','.var_export($v,TRUE);
 		MB_Log()->debug($message);
 	}
 
@@ -1041,11 +1050,18 @@ ENDCFG
 			// Mongo
 			else if (substr($l,0,5) === 'MONGO') {
 
-				// Clone command
+				// Dump command
 				if (substr($l,6,8) === 'DUMP_CMD') {
 					$v = $this->_extract($l,15);
 					if (count($v) == 1) $this->__config['mongo']['dump']['command'] = $v[0];
 					$this->_parseDebug('MONGO_DUMP_CMD',$v);
+				}
+
+				// Tarball dump command
+				else if (substr($l,6,12) === 'DUMP_TARBALL') {
+					$v = $this->_extract($l,19);
+					if (count($v) == 1) $this->__config['mongo']['dump']['tarball'] = (strtolower($v[0]) == 'yes' ? TRUE : FALSE);
+					$this->_parseDebug('MONGO_DUMP_TARBALL',$v);
 				}
 
 				// Clone
@@ -1074,11 +1090,18 @@ ENDCFG
 			// MySQL
 			else if (substr($l,0,5) === 'MYSQL') {
 
-				// Clone command
+				// Dump command
 				if (substr($l,6,8) === 'DUMP_CMD') {
 					$v = $this->_extract($l,15);
 					if (count($v) == 1) $this->__config['mysql']['dump']['command'] = $v[0];
 					$this->_parseDebug('MYSQL_DUMP_CMD',$v);
+				}
+
+				// Dump tarball
+				else if (substr($l,6,12) === 'DUMP_TARBALL') {
+					$v = $this->_extract($l,19);
+					if (count($v) == 1) $this->__config['mysql']['dump']['tarball'] = (strtolower($v[0]) == 'yes' ? TRUE : FALSE);
+					$this->_parseDebug('MYSQL_DUMP_TARBALL',$v);
 				}
 
 				// Clone
@@ -1110,6 +1133,7 @@ ENDCFG
 	private function __construct() {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		$this->_parse($this->_default());
+		#var_dump($this->__config);exit();
 	}
 
 	/**
@@ -1356,9 +1380,9 @@ final class MB_Controller {
 
 		// FILE_TARBALL
 		$fileTarballs = MB_Config()->get('file.tarball.entries');
+		$fileTarballCommand = MB_Config()->get('file.tarball.command');
 		if (count($fileTarballs) > 0) {
 			MB_System()->output('Processing file tarball(s)...');
-			$fileTarballCommand = MB_Config()->get('file.tarball.command');
 			foreach ($fileTarballs as $fileTarball) {
 				$c = MB_Format()->cmdFileTarball($fileTarballCommand,$fileTarball,$backupRoot.DS.$targetName.DS.'FILE_TARBALL.tar');
 				MB_System()->execute($c);
@@ -1378,6 +1402,15 @@ final class MB_Controller {
 			}
 		}
 
+		// MONGO_DUMP_TARBALL
+		$mongoDumpTarball = MB_Config()->get('mongo.dump.tarball');
+		if (count($mongoDumps) > 0 AND $mongoDumpTarball) {
+			MB_System()->output('Tarball mongo dump(s)...');
+			$archiveCommand = MB_Config()->get('archive.command');
+			$c = MB_Format()->cmdArchive($archiveCommand,$backupRoot.DS.$targetName.DS.'MONGO_DUMP',$backupRoot.DS.$targetName.DS.'MONGO_DUMP.tar');
+			MB_System()->execute($c);
+		}
+
 		// MYSQL_DUMP
 		$mysqlDumps = MB_Config()->get('mysql.dump.entries');
 		if (count($mysqlDumps) > 0) {
@@ -1389,6 +1422,15 @@ final class MB_Controller {
 				$c2 = str_replace($mysqlDump['password'],'*****',$c);
 				MB_System()->execute($c,$c2);
 			}
+		}
+
+		// MYSQL_DUMP_TARBALL
+		$mysqlDumpTarball = MB_Config()->get('mysql.dump.tarball');
+		if (count($mysqlDumps) > 0 AND $mysqlDumpTarball) {
+			MB_System()->output('Tarball mysql dump(s)...');
+			$archiveCommand = MB_Config()->get('archive.command');
+			$c = MB_Format()->cmdArchive($archiveCommand,$backupRoot.DS.$targetName.DS.'MYSQL_DUMP',$backupRoot.DS.$targetName.DS.'MYSQL_DUMP.tar');
+			MB_System()->execute($c);
 		}
 
 		// ARCHIVE
@@ -1443,6 +1485,18 @@ final class MB_Controller {
 	}
 
 	/**
+	 * Version action
+	 */
+	public function actionVersion() {
+		MB_Log()->debug('  '.__METHOD__.'()');
+		if (str_replace(MB_ROOT.DS,'',__FILE__) == 'myBackup.ph')$c = 'myBackup.ph';
+		else $c = 'php index.php';
+		MB_System()->output('PCT211/myBackup v'.MB_VERSION.' "'.$c.'"');
+		MB_System()->output('Made by C!$C0^211 (http://cisco211.de)');
+		MB_System()->output('USE AT YOUR OWN RISK SOFTWARE!');
+	}
+
+	/**
 	 * Router
 	 */
 	public function route() {
@@ -1475,6 +1529,13 @@ final class MB_Controller {
 			$this->action = 'Help';
 			return;
 		}
+
+		// Do help
+		if (MB_Option()->version === FALSE) {
+			$this->action = 'Version';
+			return;
+		}
+
 		// Do default
 		$this->action = 'Unknown';
 	}

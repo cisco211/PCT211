@@ -27,7 +27,7 @@ final class MB_Controller {
 		MB_System()->output('Checking commands...');
 		$commands = array(
 			'bzip2',
-			/*'cd',*/
+			'cd',
 			'cp',
 			'cpio',
 			'echo',
@@ -188,9 +188,9 @@ final class MB_Controller {
 		
 		// FILE_TARBALL
 		$fileTarballs = MB_Config()->get('file.tarball.entries');
+		$fileTarballCommand = MB_Config()->get('file.tarball.command');
 		if (count($fileTarballs) > 0) {
 			MB_System()->output('Processing file tarball(s)...');
-			$fileTarballCommand = MB_Config()->get('file.tarball.command');
 			foreach ($fileTarballs as $fileTarball) {
 				$c = MB_Format()->cmdFileTarball($fileTarballCommand,$fileTarball,$backupRoot.DS.$targetName.DS.'FILE_TARBALL.tar');
 				MB_System()->execute($c);
@@ -210,6 +210,15 @@ final class MB_Controller {
 			}
 		}
 		
+		// MONGO_DUMP_TARBALL
+		$mongoDumpTarball = MB_Config()->get('mongo.dump.tarball');
+		if (count($mongoDumps) > 0 AND $mongoDumpTarball) {
+			MB_System()->output('Tarball mongo dump(s)...');
+			$archiveCommand = MB_Config()->get('archive.command');
+			$c = MB_Format()->cmdArchive($archiveCommand,$backupRoot.DS.$targetName.DS.'MONGO_DUMP',$backupRoot.DS.$targetName.DS.'MONGO_DUMP.tar');
+			MB_System()->execute($c);
+		}
+		
 		// MYSQL_DUMP
 		$mysqlDumps = MB_Config()->get('mysql.dump.entries');
 		if (count($mysqlDumps) > 0) {
@@ -221,6 +230,15 @@ final class MB_Controller {
 				$c2 = str_replace($mysqlDump['password'],'*****',$c);
 				MB_System()->execute($c,$c2);
 			}
+		}
+		
+		// MYSQL_DUMP_TARBALL
+		$mysqlDumpTarball = MB_Config()->get('mysql.dump.tarball');
+		if (count($mysqlDumps) > 0 AND $mysqlDumpTarball) {
+			MB_System()->output('Tarball mysql dump(s)...');
+			$archiveCommand = MB_Config()->get('archive.command');
+			$c = MB_Format()->cmdArchive($archiveCommand,$backupRoot.DS.$targetName.DS.'MYSQL_DUMP',$backupRoot.DS.$targetName.DS.'MYSQL_DUMP.tar');
+			MB_System()->execute($c);
 		}
 		
 		// ARCHIVE
@@ -275,6 +293,18 @@ final class MB_Controller {
 	}
 	
 	/**
+	 * Version action
+	 */
+	public function actionVersion() {
+		MB_Log()->debug('  '.__METHOD__.'()');
+		if (str_replace(MB_ROOT.DS,'',__FILE__) == 'myBackup.ph')$c = 'myBackup.ph';
+		else $c = 'php index.php';
+		MB_System()->output('PCT211/myBackup v'.MB_VERSION.' "'.$c.'"');
+		MB_System()->output('Made by C!$C0^211 (http://cisco211.de)');
+		MB_System()->output('USE AT YOUR OWN RISK SOFTWARE!');
+	}
+	
+	/**
 	 * Router
 	 */
 	public function route() {
@@ -307,6 +337,13 @@ final class MB_Controller {
 			$this->action = 'Help';
 			return;
 		}
+		
+		// Do help
+		if (MB_Option()->version === FALSE) {
+			$this->action = 'Version';
+			return;
+		}
+		
 		// Do default
 		$this->action = 'Unknown';
 	}

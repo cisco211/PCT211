@@ -15,10 +15,23 @@ function MB_Option() {
 final class MB_Option {
 	
 	/**
-	 * Current options
+	 * Options data
 	 */
 	
 	private $__data = array();
+	
+	/**
+	 * Options scheme
+	 * @var unknown
+	 */
+	private $__scheme = array(
+		'c'=>'check',	// Check environment (No value)
+		'd'=>'default',	// Return default config (No value)
+		'f:'=>'file:',	// File (Required value)
+		'h'=>'help',	// Help (No value)
+		'q'=>'quiet',	// Quiet (No value)
+		'v'=>'version',	// Version (No value)
+	);
 	
 	/**
 	 * Instance variable
@@ -38,23 +51,11 @@ final class MB_Option {
 	private function __construct() {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		
-		// Options scheme
-		$oS = array(); $oL = array();
-		$oS[] = 'c'; $oL[] = 'check'; // Check environment (No value)
-		$oS[] = 'd'; $oL[] = 'default'; // Return default config (No value)
-		$oS[] = 'f:'; $oL[] = 'file:'; // File (Required value)
-		$oS[] = 'h'; $oL[] = 'help'; // Help (No value)
-		$oS[] = 'q'; $oL[] = 'quiet'; // Quiet (No value)
-		
 		// Get options
-		$o = getopt(implode('',$oS),$oL);
+		$o = getopt(implode('',array_keys($this->__scheme)),$this->__scheme);
 		
 		// Assign options
-		$this->_set($o,'c','check');
-		$this->_set($o,'d','default');
-		$this->_set($o,'f','file');
-		$this->_set($o,'h','help');
-		$this->_set($o,'q','quiet');
+		foreach ($this->__scheme as $k => $v) $this->_set($o,trim($k,':'),trim($v,':'));
 	}
 	
 	/**

@@ -57,12 +57,14 @@ final class MB_Config {
 			'dump'=>array(
 				'command'=>NULL,
 				'entries'=>array(),
+				'tarball'=>NULL,
 			),
 		),
 		'mysql'=>array(
 			'dump'=>array(
 				'command'=>NULL,
 				'entries'=>array(),
+				'tarball'=>NULL,
 			),
 		),
 	);
@@ -167,6 +169,10 @@ MONGO_DUMP
 #MONGO_DUMP_CMD	mongodump --verbose --host {\$host} --port {\$port} --user {\$user} --password {\$password} --db {\$database} --collection {\$collection} --out {\$target}
 MONGO_DUMP_CMD	mongodump --verbose --db {\$database} --out {\$target}
 
+# Tarball dump
+#MONGO_DUMP_TARBALL yes
+MONGO_DUMP_TARBALL no
+
 # MYSQL commands
 # --------------
 
@@ -178,15 +184,20 @@ MYSQL_DUMP
 #MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose --all-databases -u {\$user} -p{\$password} > {\$target}
 MYSQL_DUMP_CMD	mysqldump --add-locks --events --verbose -u {\$user} -p{\$password} {\$database} > {\$target}
 
+# Tarball dump
+#MYSQL_DUMP_TARBALL yes
+MYSQL_DUMP_TARBALL no
+
 #~END
 ENDCFG
 		);
 	}
 	
 	private function _extract($line,$position) {
+		#MB_Log()->debug('  '.__METHOD__.'()');
 		$output = explode(chr(9),substr($line,$position));
 		foreach ($output as $k => $v) {
-			if (empty($v) AND $v !== '0') unset($output[$k]);
+			if ($v === '') unset($output[$k]);
 		}
 		return $output;
 	}
@@ -201,9 +212,7 @@ ENDCFG
 		if (!MB_DEBUG) return;
 		$message = '   '.$command;
 		if (is_string($values)) $values = explode(chr(9),$values);
-		foreach ($values as $value) {
-			if (!empty($value) OR $value === '0') $message .= ','.var_export($value,TRUE);
-		}
+		foreach ($values as $v) $message .= ','.var_export($v,TRUE);
 		MB_Log()->debug($message);
 	}
 	
@@ -388,13 +397,20 @@ ENDCFG
 			// Mongo
 			else if (substr($l,0,5) === 'MONGO') {
 			
-				// Clone command
+				// Dump command
 				if (substr($l,6,8) === 'DUMP_CMD') {
 					$v = $this->_extract($l,15);
 					if (count($v) == 1) $this->__config['mongo']['dump']['command'] = $v[0];
 					$this->_parseDebug('MONGO_DUMP_CMD',$v);
 				}
 			
+				// Tarball dump command
+				else if (substr($l,6,12) === 'DUMP_TARBALL') {
+					$v = $this->_extract($l,19);
+					if (count($v) == 1) $this->__config['mongo']['dump']['tarball'] = (strtolower($v[0]) == 'yes' ? TRUE : FALSE);
+					$this->_parseDebug('MONGO_DUMP_TARBALL',$v);
+				}
+				
 				// Clone
 				else if (substr($l,6,4) === 'DUMP') {
 					$v = $this->_extract($l,11);
@@ -410,7 +426,7 @@ ENDCFG
 					if (count($v) == 6 AND isset($v[3]) AND !empty($v[3])) $v[3] = '*****';
 					$this->_parseDebug('MONGO_DUMP',$v);
 				}
-			
+				
 				// Any other
 				else {
 					$this->_parseDebug('UNKNOWN',$l);
@@ -421,13 +437,20 @@ ENDCFG
 			// MySQL
 			else if (substr($l,0,5) === 'MYSQL') {
 		
-				// Clone command
+				// Dump command
 				if (substr($l,6,8) === 'DUMP_CMD') {
 					$v = $this->_extract($l,15);
 					if (count($v) == 1) $this->__config['mysql']['dump']['command'] = $v[0];
 					$this->_parseDebug('MYSQL_DUMP_CMD',$v);
 				}
 		
+				// Dump tarball
+				else if (substr($l,6,12) === 'DUMP_TARBALL') {
+					$v = $this->_extract($l,19);
+					if (count($v) == 1) $this->__config['mysql']['dump']['tarball'] = (strtolower($v[0]) == 'yes' ? TRUE : FALSE);
+					$this->_parseDebug('MYSQL_DUMP_TARBALL',$v);
+				}
+				
 				// Clone
 				else if (substr($l,6,4) === 'DUMP') {
 					$v = $this->_extract($l,11);
@@ -457,6 +480,7 @@ ENDCFG
 	private function __construct() {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		$this->_parse($this->_default());
+		#var_dump($this->__config);exit();
 	}
 	
 	/**

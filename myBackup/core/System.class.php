@@ -15,6 +15,11 @@ function MB_System() {
 final class MB_System {
 	
 	/**
+	 * Handler to stdout
+	 */
+	private $stdout = NULL;
+	
+	/**
 	 * Instance variable
 	 */
 	private static $instance = NULL;
@@ -22,12 +27,37 @@ final class MB_System {
 	/**
 	 * Execute command
 	 */
-	private function _execute($command) {
+	private function _execute($command,$buffer) {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		$c = NULL;
-		$o = array();
-		$r = exec($command,$o,$c);
-		return array('code'=>$c,'result'=>$r,'output'=>$o);
+		$d = array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','a'));
+		$p = array();
+		$q = MB_Option()->quiet;
+		$h = proc_open('('.$command.')2>&1',$d,$p);
+		$x = array('code'=>NULL,'output'=>NULL);
+		if ($h === FALSE OR !is_resource($h)) return $x;
+		$s = proc_get_status($h);
+		while ($s['running']) {
+			if (!feof($p[1])) {
+				$b = fgets($p[1],128);
+				if (!$buffer AND $q !== FALSE) fwrite($this->stdout,$b);
+				else $x['output'] .= $b;
+			}
+			$s = proc_get_status($h);
+		}
+		fclose($p[0]);
+		fclose($p[1]);
+		fclose($p[2]);
+		proc_close($h);
+		$x['code'] = $s['exitcode'];
+		return $x;
+	}
+	
+	private function __construct() {
+		$this->stdout = fopen('php://stdout','w');
+	}
+	
+	public function __destruct() {
+		@fclose($this->stdout);
 	}
 	
 	/**
@@ -55,8 +85,8 @@ final class MB_System {
 	 */
 	public function check($command) {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		$r = $this->_execute('which '.$command);
-		if ($r['code'] == 0 AND strlen($r['result']) > 0 AND substr($r['result'],0,1) == '/') return TRUE;
+		$r = $this->_execute('which '.$command,TRUE);
+		if ($r['code'] == 0) return TRUE;
 		else return FALSE;
 	}
 	
@@ -69,9 +99,8 @@ final class MB_System {
 		if ($timeout == 0) return TRUE;
 		$items = new DirectoryIterator($path);
 		foreach ($items as $item) {
-			var_dump($item->getFilename(),filemtime($path.DS.$item->getFilename()),$timeout,filemtime($path.DS.$item->getFilename())+$timeout,time());
 			if (!$item->isDot() AND (filemtime($path.DS.$item->getFilename())+$timeout) < time()) {
-				$this->execute(MB_Format()->cmdClean($command,$path.DS.$item->getFilename()));
+				$this->_execute(MB_Format()->cmdClean($command,$path.DS.$item->getFilename()),FALSE);
 			}
 		}
 		return TRUE;
@@ -82,9 +111,8 @@ final class MB_System {
 	 */
 	public function execute($command,$secureCommand=NULL) {
 		MB_Log()->debug('  '.__METHOD__.'()');
-		$r = $this->_execute($command);
 		$this->output('Executing "'.($secureCommand === NULL?$command:$secureCommand).'"');
-		$this->output(implode(EOL,$r['output']));
+		$r = $this->_execute($command,FALSE);
 		return $r;
 	}
 	
@@ -103,7 +131,7 @@ final class MB_System {
 	public function output($data = '') {
 		MB_Log()->debug('  '.__METHOD__.'()');
 		MB_Log()->debug($data);
-		if (MB_Option()->quiet !== FALSE) print $data.EOL;
+		if (MB_Option()->quiet !== FALSE) fwrite($this->stdout,$data.EOL);
 	}
 	
 	/**

@@ -4,6 +4,16 @@ if (!defined('MB_EXEC')) exit('Invalid access!'.EOL);
 // No time limit
 set_time_limit(0);
 
+// PHP Options
+ini_set('output_buffering',0);
+ini_set('implicit_flush',1);
+ini_set('zlib.output_compression',0);
+
+// Output buffering
+ob_start(NULL,2);
+ob_implicit_flush(TRUE);
+ob_end_flush();
+
 // Generic constants
 define('EOL',chr(13).chr(10));
 
@@ -11,7 +21,7 @@ define('EOL',chr(13).chr(10));
 define('MB_DEBUG',FALSE);
 define('MB_NAME','MyBackup');
 define('MB_START',microtime(TRUE));
-define('MB_VERSION','0.4');
+define('MB_VERSION','0.5');
 define('MB_XDEBUG',FALSE);
 
 // TODO
